@@ -35,8 +35,20 @@ a {
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .MuiDialog-root {
+    visibility: visible;
+  }
+
+  .MuiDialog-root * {
+    visibility: visible;
+  }
+
+  button {
+    display: none;
   }
 }
