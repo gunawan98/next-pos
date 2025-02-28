@@ -8,10 +8,8 @@ import { useRouter } from "next/navigation";
 import {
   Box,
   FormControl,
-  InputBase,
   InputLabel,
   Select,
-  Paper,
   Stack,
   MenuItem,
   TextField,
@@ -20,12 +18,16 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  InputAdornment,
+  Divider,
 } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 
 import SendIcon from "@mui/icons-material/Send";
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner";
 import PaymentReceiptPreview from "@/components/PaymentRecipt";
+import PinRoundedIcon from "@mui/icons-material/PinRounded";
+import { useSnackbar, VariantType } from "notistack";
 
 interface CartItem {
   id: number;
@@ -71,10 +73,6 @@ type PaymentData = {
   purchase: Purchase;
 };
 
-type PaymentPageProps = {
-  cartId: number;
-};
-
 function SubmitButton() {
   const { pending } = useFormStatus();
 
@@ -86,20 +84,21 @@ function SubmitButton() {
       loading={pending}
       loadingPosition="end"
       variant="contained"
+      fullWidth
+      sx={{ my: 1 }}
     >
-      Send
+      Submit
     </LoadingButton>
   );
 }
 
 function AddFormComponent({ currentCart }: TypeCurrentCart) {
-  const router = useRouter(); // Use the router hook
+  const { enqueueSnackbar } = useSnackbar();
+
+  const router = useRouter();
   const cartId = String(currentCart?.id);
   const [cartItem, setCartItem] = useState<Cart | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [message, setMessage] = useState<string>("");
-  const [error, setError] = useState<string>("");
-
   const [openDialog, setOpenDialog] = useState(false);
 
   const handleClickOpenDialog = () => {
@@ -130,7 +129,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
           setCartItem(data.data);
         }
       } catch (err: any) {
-        setError(err.message);
+        enqueueSnackbar(err.message, { variant: "error" });
       }
     };
 
@@ -140,92 +139,112 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
   }, [cartId]);
 
   const handleAddProductToCart = async (formData: FormData) => {
-    setMessage("");
-    setError("");
+    try {
+      const response = await addItemToCart(formData, cartId!);
 
-    const response = await addItemToCart(formData, cartId!);
+      if (response.status === 200) {
+        const getCartItem = await fetch(`/api/cart-item?cartId=${cartId}`);
 
-    if (response.status === 200) {
-      const getCartItem = await fetch(`/api/cart-item?cartId=${cartId}`);
+        if (getCartItem.status === 401) {
+          router.push("/login");
+          return;
+        }
 
-      if (getCartItem.status === 401) {
-        router.push("/login");
-        return;
+        if (!getCartItem.ok) {
+          const errorData = await getCartItem.json();
+          throw new Error(errorData.message || "Failed to fetch products");
+        }
+
+        const data = await getCartItem.json();
+        if (data?.data) {
+          setCartItem(data.data);
+        }
+
+        if ("message" in response) {
+          enqueueSnackbar(response.message, { variant: "success" });
+        }
+      } else {
+        if ("message" in response)
+          enqueueSnackbar(response.message, { variant: "error" });
       }
-
-      if (!getCartItem.ok) {
-        const errorData = await getCartItem.json();
-        throw new Error(errorData.message || "Failed to fetch products");
+    } catch (error) {
+      if (error instanceof Error) {
+        enqueueSnackbar(error.message, { variant: "error" });
+      } else {
+        enqueueSnackbar("An unknown error occured", { variant: "error" });
       }
-
-      const data = await getCartItem.json();
-      if (data?.data) {
-        setCartItem(data.data);
-      }
-
-      if ("message" in response) setMessage(response.message);
-    } else {
-      if ("message" in response) setError(response.message);
     }
   };
 
   const handlePurchase = async (formData: FormData) => {
-    setMessage("");
-    setError("");
-
-    const response = await purchasingCart(formData, cartId!);
-    if (response.status === 200) {
-      setCartItem(null);
-      if ("data" in response) {
-        setPaymentData(response.data);
+    try {
+      const response = await purchasingCart(formData, cartId!);
+      if (response.status === 200) {
+        setCartItem(null);
+        if ("data" in response) {
+          setPaymentData(response.data);
+        }
+        if ("message" in response)
+          enqueueSnackbar(response.message ?? "", { variant: "success" });
+      } else {
+        if ("message" in response)
+          enqueueSnackbar(response.message ?? "", { variant: "error" });
       }
-      if ("message" in response) setMessage(response.message ?? "");
-    } else {
-      if ("message" in response) setError(response.message ?? "");
+    } catch (error) {
+      if (error instanceof Error) {
+        enqueueSnackbar(error.message, { variant: "error" });
+      } else {
+        enqueueSnackbar("An unknown error occurred", { variant: "error" });
+      }
     }
   };
 
   return (
     <>
-      {message && <p style={{ color: "green" }}>{message}</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {/* <form action={handleAddProductToCart}>
-        <label htmlFor="barcode">Barcode</label>
-        <input type="text" id="barcode" name="barcode" required />
-        <label htmlFor="quantity">Quantity</label>
-        <input type="number" id="quantity" name="quantity" required />
-        <SubmitButton />
-      </form> */}
-
-      <Paper
-        component="form"
-        action={handleAddProductToCart}
-        sx={{ p: "2px 4px", display: "flex", alignItems: "center" }}
-      >
-        <Box sx={{ flex: 0.5 }}>
-          x{" "}
-          <InputBase
-            sx={{ width: "50px", textAlign: "right" }}
-            type="number"
-            defaultValue={1}
-            inputProps={{ "aria-label": "amount" }}
-            name="quantity"
-            required
-          />
-        </Box>
-
-        <DocumentScannerIcon sx={{ color: "gray" }} />
-        <InputBase
-          sx={{ ml: 1, flex: 1 }}
-          placeholder="Scan Code"
-          inputProps={{ "aria-label": "scan barcode" }}
-          name="barcode"
+      <Box component="form" action={handleAddProductToCart} mt={1}>
+        <TextField
+          name="quantity"
+          type="number"
+          defaultValue={1}
+          label="Quantity"
+          id="input-quantity"
+          size="small"
+          fullWidth
           required
+          sx={{ mb: 1 }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <PinRoundedIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        <TextField
+          name="barcode"
+          label="Barcode"
+          id="input-barcode"
+          size="small"
+          fullWidth
+          required
+          sx={{ mb: 1 }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <DocumentScannerIcon />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
         <SubmitButton />
-      </Paper>
-      <br />
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
 
       {cartItem?.items &&
         cartItem.items.map((item) => (
@@ -254,16 +273,17 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
             </Box>
           </Stack>
         ))}
-      <br />
 
-      <Button
-        fullWidth
-        size="small"
-        variant="outlined"
-        onClick={handleClickOpenDialog}
-      >
-        Confirm
-      </Button>
+      <Box position="sticky" bottom={0} width="100%">
+        <Button
+          fullWidth
+          size="small"
+          variant="contained"
+          onClick={handleClickOpenDialog}
+        >
+          Purchase
+        </Button>
+      </Box>
 
       <Dialog
         open={openDialog}
@@ -315,10 +335,6 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
               required
             />
 
-            {/* <label htmlFor="paid">Paid:</label>
-        <input type="text" name="paid" required />
-        <label htmlFor="payment_method">Payment Method:</label>
-        <input type="text" name="payment_method" required /> */}
             <SubmitButton />
           </Box>
         </DialogContent>

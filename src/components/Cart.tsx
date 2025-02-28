@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AddForm } from "./form/cart/add-form";
-import { Box, Button } from "@mui/material";
+import { Box, Button, Chip, Stack } from "@mui/material";
 
 interface CartItem {
   id: number;
@@ -81,29 +81,61 @@ export default function Cart() {
 
   const handleChooseCart = (item: CartItem) => setCurrentCart(item);
 
+  const handleDelete = () => {
+    console.info("You clicked the delete icon.");
+  };
+
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <Box component="section">
-      <Button variant="outlined" size="small" onClick={handleCreateCart}>
+    <Box
+      component="section"
+      sx={{
+        maxHeight: "82vh",
+        overflow: "auto",
+        scrollbarWidth: "none",
+        "&::-webkit-scrollbar": {
+          display: "none",
+        },
+      }}
+    >
+      <Button
+        variant="contained"
+        size="small"
+        fullWidth
+        onClick={handleCreateCart}
+      >
         Create Cart
       </Button>
-      <h3>Choose an available cart: {currentCart?.id || "-"}</h3>
-      {cart &&
-        cart.map((item) => (
-          <Button
-            variant="outlined"
-            size="small"
-            key={item.id}
-            onClick={() => handleChooseCart(item)}
-            disabled={item.id === currentCart?.id}
-          >
-            Cart {item.id}
-          </Button>
-        ))}
 
-      <h3>Scan product:</h3>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          paddingY: 1,
+          overflowX: "auto",
+          whiteSpace: "nowrap",
+          scrollbarWidth: "none", // Untuk Firefox
+          "&::-webkit-scrollbar": {
+            display: "none", // Untuk Chrome, Safari, dan Opera
+          },
+        }}
+      >
+        {cart &&
+          cart.map((item) => (
+            <Chip
+              key={item.id}
+              label={"Cart " + item.id}
+              size="small"
+              disabled={item.id === currentCart?.id}
+              onClick={() => handleChooseCart(item)}
+              onDelete={handleDelete}
+              color="primary"
+            />
+          ))}
+      </Stack>
+
       {currentCart?.id && <AddForm currentCart={currentCart} />}
     </Box>
   );

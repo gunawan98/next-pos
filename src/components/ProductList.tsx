@@ -2,14 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-interface Product {
-  id: number;
-  name: string;
-}
+import CardProduct from "./card/CardProduct";
+import { Box, Grid2 } from "@mui/material";
+import { CardProductProps } from "@/types/product";
 
 interface ProductResponse {
-  data: Product[];
+  data: CardProductProps[];
 }
 
 interface ErrorResponse {
@@ -17,7 +15,7 @@ interface ErrorResponse {
 }
 
 export default function ProductList() {
-  const [products, setProducts] = useState<Product[] | null>(null);
+  const [products, setProducts] = useState<CardProductProps[] | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -56,11 +54,20 @@ export default function ProductList() {
 
   return (
     <>
-      <h1>Products</h1>
-      <ul>
-        {products &&
-          products.map((product) => <li key={product.id}>{product.name}</li>)}
-      </ul>
+      <Box sx={{ flexGrow: 1 }}>
+        <Grid2
+          container
+          spacing={{ xs: 2, md: 3 }}
+          columns={{ xs: 4, sm: 6, md: 8 }}
+        >
+          {products &&
+            products.map((product) => (
+              <Grid2 key={product.id} size={{ xs: 2, sm: 2, md: 2 }}>
+                <CardProduct {...product} />
+              </Grid2>
+            ))}
+        </Grid2>
+      </Box>
     </>
   );
 }
