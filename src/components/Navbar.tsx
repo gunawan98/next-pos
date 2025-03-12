@@ -13,7 +13,7 @@ export default function Navbar() {
       <AppBar position="fixed">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Navbar
+            Point of Sale
           </Typography>
           <ThemeToggleButton onToggle={setThemeMode} />
         </Toolbar>

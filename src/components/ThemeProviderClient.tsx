@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import {
   ThemeProvider as CustomThemeProvider,
@@ -21,6 +21,15 @@ export default function ThemeProviderClient({
 
 function InnerThemeProviderClient({ children }: { children: React.ReactNode }) {
   const { themeMode } = useThemeContext();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return null;
+  }
 
   const theme = createTheme({
     palette: {
@@ -32,9 +41,15 @@ function InnerThemeProviderClient({ children }: { children: React.ReactNode }) {
           : themeMode,
       primary: {
         main: "#FF9800",
+        light: "#FFCC80",
+        dark: "#F57C00",
+        contrastText: "#000000",
       },
       secondary: {
         main: "#FF5722",
+        light: "#FF8A50",
+        dark: "#D84315",
+        contrastText: "#FFFFFF",
       },
       background: {
         default: themeMode === "dark" ? "#303030" : "#FFF3E0",
@@ -44,6 +59,20 @@ function InnerThemeProviderClient({ children }: { children: React.ReactNode }) {
         primary: themeMode === "dark" ? "#FFFFFF" : "#000000",
         secondary: themeMode === "dark" ? "#BDBDBD" : "#757575",
       },
+    },
+    typography: {
+      fontFamily: [
+        "-apple-system",
+        "BlinkMacSystemFont",
+        '"Segoe UI"',
+        "Roboto",
+        '"Helvetica Neue"',
+        "Arial",
+        "sans-serif",
+        '"Apple Color Emoji"',
+        '"Segoe UI Emoji"',
+        '"Segoe UI Symbol"',
+      ].join(","),
     },
   });
 

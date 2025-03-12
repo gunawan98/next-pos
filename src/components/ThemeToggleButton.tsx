@@ -7,10 +7,12 @@ import {
   ListItemIcon,
   ListItemText,
   ListItemButton,
+  IconButton,
 } from "@mui/material";
-import Brightness4Icon from "@mui/icons-material/Brightness4";
-import Brightness7Icon from "@mui/icons-material/Brightness7";
 import SettingsBrightnessIcon from "@mui/icons-material/SettingsBrightness";
+import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
+import NightsStayRoundedIcon from "@mui/icons-material/NightsStayRounded";
+import { useThemeContext } from "@/context/ThemeContext";
 
 export default function ThemeToggleButton({
   onToggle,
@@ -18,6 +20,7 @@ export default function ThemeToggleButton({
   onToggle: (mode: "light" | "dark" | "system") => void;
 }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const { themeMode } = useThemeContext();
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -35,11 +38,23 @@ export default function ThemeToggleButton({
   const open = Boolean(anchorEl);
   const id = open ? "simple-popover" : undefined;
 
+  const getIcon = () => {
+    switch (themeMode) {
+      case "light":
+        return <LightModeRoundedIcon />;
+      case "dark":
+        return <NightsStayRoundedIcon />;
+      default:
+        return <SettingsBrightnessIcon />;
+    }
+  };
+
   return (
     <>
-      <Button color="inherit" onClick={handleClick}>
-        Theme
-      </Button>
+      <IconButton aria-label="theme" onClick={handleClick} color="inherit">
+        {getIcon()}
+      </IconButton>
+
       <Popover
         id={id}
         open={open}
@@ -52,13 +67,13 @@ export default function ThemeToggleButton({
       >
         <ListItemButton onClick={() => handleToggle("light")}>
           <ListItemIcon>
-            <Brightness7Icon />
+            <LightModeRoundedIcon />
           </ListItemIcon>
           <ListItemText primary="Light" />
         </ListItemButton>
         <ListItemButton onClick={() => handleToggle("dark")}>
           <ListItemIcon>
-            <Brightness4Icon />
+            <NightsStayRoundedIcon />
           </ListItemIcon>
           <ListItemText primary="Dark" />
         </ListItemButton>

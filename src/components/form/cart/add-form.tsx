@@ -20,58 +20,17 @@ import {
   DialogActions,
   InputAdornment,
   Divider,
+  Typography,
+  Chip,
 } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
-
+import EditRoundedIcon from "@mui/icons-material/EditRounded";
 import SendIcon from "@mui/icons-material/Send";
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner";
 import PaymentReceiptPreview from "@/components/PaymentRecipt";
 import PinRoundedIcon from "@mui/icons-material/PinRounded";
-import { useSnackbar, VariantType } from "notistack";
-
-interface CartItem {
-  id: number;
-  product_name: string;
-  quantity: number;
-  total_price: number;
-}
-
-interface Cart {
-  id: string;
-  items: CartItem[];
-}
-
-interface TypeCurrentCart {
-  currentCart: {
-    id: number;
-    completed: boolean;
-  } | null;
-}
-
-type Item = {
-  id: number;
-  cart_id: number;
-  product_id: number;
-  product_name: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-};
-
-type Purchase = {
-  cart_id: number;
-  cashier_id: number;
-  total_amount: number;
-  paid: number;
-  cash_back: number;
-  payment_method: string;
-  created_at: string;
-};
-
-type PaymentData = {
-  items: Item[];
-  purchase: Purchase;
-};
+import { useSnackbar } from "notistack";
+import { Cart, PaymentData, TypeCurrentCart } from "@/types/cart";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -256,20 +215,34 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
               justifyContent: "flex-start",
               alignItems: "flex-start",
               mb: 1,
+              backgroundColor: "background.default",
+              borderRadius: 2,
+              padding: 1,
             }}
           >
             <Image
-              alt="product name"
-              src="https://theboxbusiness.co.nz/wp-content/uploads/2018/03/BLANK_KRAFT-1-scaled.jpg"
+              alt={item.product_name}
+              src={item.product_image || "/images/no-image-product.webp"}
               width={0}
               height={0}
               sizes="100vw"
-              style={{ width: "30%", height: "auto", borderRadius: 2 }}
+              style={{ width: "15%", height: "auto", borderRadius: 2 }}
             />
-            <Box>
-              <strong>{item.product_name}</strong>
-              <p>x{item.quantity}</p>
-              Rp.{item.total_price}
+            <Box width="100%">
+              <Typography variant="subtitle1" color="text.primary" noWrap>
+                {item.product_name}
+              </Typography>
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="subtitle2" color="primary.dark">
+                  Rp.{item.total_price}
+                </Typography>
+                <Chip
+                  color="primary"
+                  icon={<EditRoundedIcon />}
+                  label={item.quantity}
+                  size="small"
+                />
+              </Stack>
             </Box>
           </Stack>
         ))}
@@ -298,7 +271,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
           },
         }}
       >
-        <DialogTitle>Subscribe</DialogTitle>
+        <DialogTitle>Purchase</DialogTitle>
         <DialogContent>
           <Box
             rowGap={2.5}
@@ -308,6 +281,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
               xs: "repeat(1, 1fr)",
               md: "repeat(3, 1fr)",
             }}
+            paddingY={2}
           >
             <FormControl fullWidth>
               <InputLabel id="select-payment-method">Payment Method</InputLabel>

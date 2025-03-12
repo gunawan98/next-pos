@@ -12,7 +12,12 @@ const ThemeContext = createContext<ThemeContextProps | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [themeMode, setThemeMode] = useState<ThemeMode>("system");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("themeMode") as ThemeMode) || "system";
+    }
+    return "system";
+  });
 
   useEffect(() => {
     if (themeMode === "system") {
@@ -22,6 +27,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
         : "light";
       setThemeMode(systemTheme);
     }
+    localStorage.setItem("themeMode", themeMode);
   }, [themeMode]);
 
   return (
