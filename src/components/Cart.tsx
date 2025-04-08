@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AddForm } from "./form/cart/add-form";
 import { Box, Button, Chip, Stack } from "@mui/material";
+import AddForm from "./form/cart/add-form";
 
 interface CartItem {
   id: number;
@@ -92,7 +92,7 @@ export default function Cart() {
     <Box
       component="section"
       sx={{
-        maxHeight: "82vh",
+        height: "100%",
         overflow: "auto",
         scrollbarWidth: "none",
         "&::-webkit-scrollbar": {

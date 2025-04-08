@@ -12,11 +12,13 @@ export default function DashboardLayout({
     <ThemeProviderClient>
       <Box
         component="section"
-        sx={{ backgroundColor: "background.default", minHeight: "100vh" }}
+        sx={{
+          display: "flex",
+          backgroundColor: "background.default",
+          minHeight: "100vh",
+        }}
       >
-        <Box sx={{ flexGrow: 1 }}>
-          <Navbar />
-        </Box>
+        <Navbar />
         {children}
       </Box>
     </ThemeProviderClient>

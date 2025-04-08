@@ -5,12 +5,12 @@ import Grid from "@mui/material/Grid2";
 
 const Page: React.FC = () => {
   return (
-    <Grid container spacing={2} component="section" sx={{ padding: 2 }}>
+    <Grid container spacing={2} component="section" sx={{ padding: 1 }}>
       <Grid size={8}>
         <ProductList />
       </Grid>
       <Grid
-        size={4}
+        size={3}
         sx={{
           background: "blue",
           position: "fixed",

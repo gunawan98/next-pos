@@ -4,8 +4,10 @@ import CardContent from "@mui/material/CardContent";
 import CardMedia from "@mui/material/CardMedia";
 import Typography from "@mui/material/Typography";
 import CardActionArea from "@mui/material/CardActionArea";
-import { Rating } from "@mui/material";
+import Chip from "@mui/material/Chip";
 import { CardProductProps } from "@/types/product";
+import LocalMallRoundedIcon from "@mui/icons-material/LocalMallRounded";
+import { formatToRupiah } from "@/utils/currency";
 
 export default function CardProduct(product: CardProductProps) {
   return (
@@ -24,26 +26,21 @@ export default function CardProduct(product: CardProductProps) {
         />
 
         <CardContent>
+          <Chip
+            icon={<LocalMallRoundedIcon />}
+            label={product.stock}
+            variant="filled"
+            color="secondary"
+            size="small"
+            sx={{ padding: 1, position: "absolute", top: 10, right: 10 }}
+          />
+
           <Typography variant="subtitle1" color="text.primary" noWrap>
             {product.name}
           </Typography>
 
-          <Rating
-            name="read-only"
-            value={4}
-            readOnly
-            sx={{ fontSize: "16px" }}
-          />
-          <Typography component="span" variant="subtitle1" color="text.primary">
-            ({4})
-          </Typography>
-
           <Typography variant="subtitle1" color="primary">
-            {product.barcode}
-          </Typography>
-
-          <Typography variant="subtitle1" color="primary">
-            Rp.{product.price}
+            {formatToRupiah(product.price)}
           </Typography>
         </CardContent>
       </CardActionArea>

@@ -4,6 +4,11 @@ import { validateAndRefreshToken } from "@/lib/validate_token";
 import { cookies } from "next/headers";
 import { z } from "zod";
 
+export interface ApiResponse {
+	message: string;
+	status: number;
+}
+
 export async function addItemToCart(formData: FormData, cartId: string) {
 	const schema = z.object({
 		barcode: z.string().min(1),
@@ -29,7 +34,9 @@ export async function addItemToCart(formData: FormData, cartId: string) {
 	});
 
 	if (!validAccessToken) {
-		return response || { message: "Not authenticated", status: 401 };
+		return response
+			? { message: response.statusText || "Error", status: response.status }
+			: { message: "Not authenticated", status: 401 };
 	}
 
 	try {
@@ -124,6 +131,82 @@ export async function purchasingCart(formData: FormData, cartId: string) {
 		};
 	} catch (error) {
 		console.error("Error purchasing cart:", error);
+		return { message: "Internal Server Error", status: 500 };
+	}
+}
+
+export async function updateItemInCart(cartId: string, productId: number, quantity: number) {
+	const schema = z.object({
+		product_id: z.number(),
+		quantity: z.number(),
+	});
+
+	const parse = schema.safeParse({ product_id: productId, quantity });
+
+	if (!parse.success) {
+		return { message: "Invalid input", status: 400 };
+	}
+
+	const cookieStore = cookies();
+	const { validAccessToken, response } = await validateAndRefreshToken({
+		cookies: cookieStore,
+		headers: { cookie: cookieStore.getAll() },
+	});
+
+	if (!validAccessToken) {
+		return response || { message: "Not authenticated", status: 401 };
+	}
+
+	try {
+		const responseApi = await fetch(`${process.env.HOST_NAME}/api/cart-item/${cartId}`, {
+			method: "PUT",
+			headers: {
+				Authorization: `Bearer ${validAccessToken}`,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(parse.data),
+		});
+
+		if (!responseApi.ok) {
+			return { message: "Failed to update item in cart", status: responseApi.status };
+		}
+
+		const cartData = await responseApi.json();
+		return { message: "Item updated in cart", status: 200, data: cartData };
+	} catch (error) {
+		console.error("Error updating item in cart:", error);
+		return { message: "Internal Server Error", status: 500 };
+	}
+}
+
+export async function deleteItemFromCart(cartItemId: number): Promise<ApiResponse> {
+	const cookieStore = cookies();
+	const { validAccessToken, response } = await validateAndRefreshToken({
+		cookies: cookieStore,
+		headers: { cookie: cookieStore.getAll() },
+	});
+
+	if (!validAccessToken) {
+		return { message: "Not authenticated", status: 401 };
+	}
+
+	try {
+		const responseApi = await fetch(`${process.env.HOST_NAME}/api/cart-item/${cartItemId}`, {
+			method: "DELETE",
+			headers: {
+				Authorization: `Bearer ${validAccessToken}`,
+				"Content-Type": "application/json",
+			},
+		});
+
+		if (!responseApi.ok) {
+			const errorData = await responseApi.json();
+			return { message: errorData.message || "Failed to delete item", status: responseApi.status };
+		}
+
+		return { message: "Item successfully deleted", status: 200 };
+	} catch (error) {
+		console.error("Error deleting item from cart:", error);
 		return { message: "Internal Server Error", status: 500 };
 	}
 }

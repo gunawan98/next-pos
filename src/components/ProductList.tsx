@@ -62,7 +62,7 @@ export default function ProductList() {
         >
           {products &&
             products.map((product) => (
-              <Grid2 key={product.id} size={{ xs: 2, sm: 2, md: 2 }}>
+              <Grid2 key={product.id} size={{ xs: 1, md: 2 }}>
                 <CardProduct {...product} />
               </Grid2>
             ))}

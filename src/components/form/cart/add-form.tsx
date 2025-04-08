@@ -3,7 +3,12 @@
 import { memo, useEffect, useState } from "react";
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
-import { addItemToCart, purchasingCart } from "@/app/action";
+import {
+  addItemToCart,
+  deleteItemFromCart,
+  purchasingCart,
+  updateItemInCart,
+} from "@/app/action";
 import { useRouter } from "next/navigation";
 import {
   Box,
@@ -29,8 +34,10 @@ import SendIcon from "@mui/icons-material/Send";
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner";
 import PaymentReceiptPreview from "@/components/PaymentRecipt";
 import PinRoundedIcon from "@mui/icons-material/PinRounded";
+import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import { useSnackbar } from "notistack";
 import { Cart, PaymentData, TypeCurrentCart } from "@/types/cart";
+import { formatToRupiah } from "@/utils/currency";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -51,47 +58,92 @@ function SubmitButton() {
   );
 }
 
-function AddFormComponent({ currentCart }: TypeCurrentCart) {
+function AddForm({ currentCart }: TypeCurrentCart) {
   const { enqueueSnackbar } = useSnackbar();
-
   const router = useRouter();
   const cartId = String(currentCart?.id);
   const [cartItem, setCartItem] = useState<Cart | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
+  const [openPurchaseDialog, setOpenPurchaseDialog] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{
+    product_id: number;
+    quantity: number;
+  } | null>(null);
 
-  const handleClickOpenDialog = () => {
-    setOpenDialog(true);
+  const handleClickOpenUpdateDialog = (item: {
+    product_id: number;
+    quantity: number;
+  }) => {
+    setSelectedItem(item);
+    setOpenUpdateDialog(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseUpdateDialog = () => {
+    setOpenUpdateDialog(false);
+    setSelectedItem(null);
+  };
+
+  const handleClickOpenPurchaseDialog = () => {
+    setOpenPurchaseDialog(true);
+  };
+
+  const handleClosePurchaseDialog = () => {
+    setOpenPurchaseDialog(false);
+  };
+
+  const fetchCartItems = async () => {
+    try {
+      const response = await fetch(`/api/cart-item?cartId=${cartId}`);
+
+      if (response.status === 401) {
+        router.push("/login");
+        return;
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to fetch products");
+      }
+
+      const data = await response.json();
+      if (data?.data) {
+        setCartItem(data.data);
+      }
+    } catch (err: any) {
+      enqueueSnackbar(err.message, { variant: "error" });
+    }
+  };
+
+  const handleUpdateItem = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (selectedItem) {
+      const formData = new FormData(event.currentTarget);
+      const quantity = Number(formData.get("quantity"));
+      await updateItemInCart(cartId, selectedItem.product_id, quantity);
+      handleCloseUpdateDialog();
+      fetchCartItems(); // Refetch data after update
+    }
+  };
+
+  const handleDeleteItem = async (cartItemId: number) => {
+    try {
+      const response = await deleteItemFromCart(cartItemId);
+
+      if (response.status !== 200) {
+        throw new Error(response.message || "Failed to delete item");
+      }
+
+      enqueueSnackbar(response.message, { variant: "success" });
+      fetchCartItems(); // Refetch cart items after deletion
+    } catch (error: any) {
+      enqueueSnackbar(error.message || "An error occurred", {
+        variant: "error",
+      });
+    }
   };
 
   useEffect(() => {
-    const fetchCartItems = async () => {
-      try {
-        const response = await fetch(`/api/cart-item?cartId=${cartId}`);
-
-        if (response.status === 401) {
-          router.push("/login");
-          return;
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to fetch products");
-        }
-
-        const data = await response.json();
-        if (data?.data) {
-          setCartItem(data.data);
-        }
-      } catch (err: any) {
-        enqueueSnackbar(err.message, { variant: "error" });
-      }
-    };
-
     if (cartId) {
       fetchCartItems();
     }
@@ -102,26 +154,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
       const response = await addItemToCart(formData, cartId!);
 
       if (response.status === 200) {
-        const getCartItem = await fetch(`/api/cart-item?cartId=${cartId}`);
-
-        if (getCartItem.status === 401) {
-          router.push("/login");
-          return;
-        }
-
-        if (!getCartItem.ok) {
-          const errorData = await getCartItem.json();
-          throw new Error(errorData.message || "Failed to fetch products");
-        }
-
-        const data = await getCartItem.json();
-        if (data?.data) {
-          setCartItem(data.data);
-        }
-
-        if ("message" in response) {
-          enqueueSnackbar(response.message, { variant: "success" });
-        }
+        fetchCartItems(); // Refetch data after adding product
       } else {
         if ("message" in response)
           enqueueSnackbar(response.message, { variant: "error" });
@@ -130,7 +163,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
       if (error instanceof Error) {
         enqueueSnackbar(error.message, { variant: "error" });
       } else {
-        enqueueSnackbar("An unknown error occured", { variant: "error" });
+        enqueueSnackbar("An unknown error occurred", { variant: "error" });
       }
     }
   };
@@ -143,11 +176,10 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
         if ("data" in response) {
           setPaymentData(response.data);
         }
-        if ("message" in response)
-          enqueueSnackbar(response.message ?? "", { variant: "success" });
+
+        enqueueSnackbar("Purchase successful", { variant: "success" });
       } else {
-        if ("message" in response)
-          enqueueSnackbar(response.message ?? "", { variant: "error" });
+        enqueueSnackbar("Something error", { variant: "error" });
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -157,6 +189,8 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
       }
     }
   };
+
+  console.log("cartItem", cartItem);
 
   return (
     <>
@@ -213,7 +247,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
             spacing={1}
             sx={{
               justifyContent: "flex-start",
-              alignItems: "flex-start",
+              alignItems: "center",
               mb: 1,
               backgroundColor: "background.default",
               borderRadius: 2,
@@ -232,42 +266,110 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
               <Typography variant="subtitle1" color="text.primary" noWrap>
                 {item.product_name}
               </Typography>
-              <Stack direction="row" justifyContent="space-between">
+              <Typography variant="subtitle2" color="textDisabled">
+                Harga {formatToRupiah(item.unit_price)}
+              </Typography>
+              <Stack
+                direction={{ xs: "column", lg: "row" }}
+                justifyContent="space-between"
+              >
                 <Typography variant="subtitle2" color="primary.dark">
-                  Rp.{item.total_price}
+                  {formatToRupiah(item.total_price)}
                 </Typography>
-                <Chip
-                  color="primary"
-                  icon={<EditRoundedIcon />}
-                  label={item.quantity}
-                  size="small"
-                />
+                <Box>
+                  <Chip
+                    color="primary"
+                    icon={<EditRoundedIcon />}
+                    label={item.quantity}
+                    size="small"
+                    onClick={() =>
+                      handleClickOpenUpdateDialog({
+                        product_id: item.product_id,
+                        quantity: item.quantity,
+                      })
+                    }
+                    sx={{ mr: 1 }}
+                  />
+                  <Chip
+                    color="error"
+                    icon={<DeleteRoundedIcon />}
+                    label="Delete"
+                    size="small"
+                    onClick={() => handleDeleteItem(item.id)}
+                  />
+                </Box>
               </Stack>
             </Box>
           </Stack>
         ))}
 
-      <Box position="sticky" bottom={0} width="100%">
+      <Box
+        sx={{
+          position: "sticky",
+          bottom: 0,
+          width: "100%",
+          backgroundColor: "background.paper",
+          paddingY: 2,
+        }}
+      >
+        <Typography variant="subtitle1" color="text.primary">
+          Total Items: {cartItem?.items?.length}
+        </Typography>
+        <Typography variant="subtitle1" color="text.primary">
+          Total Price:{" "}
+          <strong>{formatToRupiah(cartItem?.total_purchase ?? 0)}</strong>
+        </Typography>
+
         <Button
           fullWidth
           size="small"
           variant="contained"
-          onClick={handleClickOpenDialog}
+          onClick={handleClickOpenPurchaseDialog}
         >
           Purchase
         </Button>
       </Box>
 
       <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
+        open={openUpdateDialog}
+        onClose={handleCloseUpdateDialog}
+        closeAfterTransition={false}
+        PaperProps={{
+          component: "form",
+          onSubmit: handleUpdateItem,
+        }}
+      >
+        <DialogTitle>Update Quantity</DialogTitle>
+        <DialogContent>
+          <TextField
+            name="quantity"
+            type="number"
+            label="Quantity"
+            defaultValue={selectedItem?.quantity}
+            size="small"
+            variant="outlined"
+            required
+            fullWidth
+            sx={{ my: 2 }}
+          />
+          <SubmitButton />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseUpdateDialog}>Cancel</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openPurchaseDialog}
+        onClose={handleClosePurchaseDialog}
+        closeAfterTransition={false}
         PaperProps={{
           component: "form",
           onSubmit: async (event: React.FormEvent<HTMLFormElement>) => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
             await handlePurchase(formData); // Call handlePurchase with formData
-            handleCloseDialog();
+            handleClosePurchaseDialog();
           },
         }}
       >
@@ -313,7 +415,7 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
+          <Button onClick={handleClosePurchaseDialog}>Cancel</Button>
         </DialogActions>
       </Dialog>
 
@@ -322,4 +424,4 @@ function AddFormComponent({ currentCart }: TypeCurrentCart) {
   );
 }
 
-export const AddForm = memo(AddFormComponent);
+export default memo(AddForm);
