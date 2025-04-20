@@ -7,6 +7,7 @@ import { z } from "zod";
 export interface ApiResponse {
 	message: string;
 	status: number;
+	data?: any;
 }
 
 export async function addItemToCart(formData: FormData, cartId: string) {
@@ -71,7 +72,7 @@ export async function addItemToCart(formData: FormData, cartId: string) {
 	}
 }
 
-export async function purchasingCart(formData: FormData, cartId: string) {
+export async function purchasingCart(formData: FormData, cartId: string): Promise<ApiResponse> {
 	const schema = z.object({
 		cart_id: z.coerce.number(),
 		paid: z.coerce.number(),
@@ -98,7 +99,9 @@ export async function purchasingCart(formData: FormData, cartId: string) {
 	});
 
 	if (!validAccessToken) {
-		return response || { message: "Not authenticated", status: 401 };
+		return response
+			? { message: response.statusText || "Error", status: response.status }
+			: { message: "Not authenticated", status: 401 };
 	}
 
 	try {

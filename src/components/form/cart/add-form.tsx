@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useFormStatus } from "react-dom";
 import {
@@ -27,10 +27,12 @@ import {
   Divider,
   Typography,
   Chip,
+  OutlinedInput,
+  Alert,
+  FormLabel,
 } from "@mui/material";
 import LoadingButton from "@mui/lab/LoadingButton";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
-import SendIcon from "@mui/icons-material/Send";
 import DocumentScannerIcon from "@mui/icons-material/DocumentScanner";
 import PaymentReceiptPreview from "@/components/PaymentRecipt";
 import PinRoundedIcon from "@mui/icons-material/PinRounded";
@@ -38,6 +40,13 @@ import DeleteRoundedIcon from "@mui/icons-material/DeleteRounded";
 import { useSnackbar } from "notistack";
 import { Cart, PaymentData, TypeCurrentCart } from "@/types/cart";
 import { formatToRupiah } from "@/utils/currency";
+import CardItemListSkeleton from "@/components/buffering/list-item-card";
+
+interface AddFormProps {
+  handleClearAfterPurchase: () => void;
+
+  currentCart: TypeCurrentCart;
+}
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -46,23 +55,26 @@ function SubmitButton() {
     <LoadingButton
       type="submit"
       size="small"
-      endIcon={<SendIcon />}
       loading={pending}
-      loadingPosition="end"
       variant="contained"
       fullWidth
-      sx={{ my: 1 }}
+      sx={{
+        my: 1,
+        "& .MuiLoadingButton-loadingIndicator": {
+          color: (theme) => (theme.palette.mode === "dark" ? "black" : "white"),
+        },
+      }}
     >
       Submit
     </LoadingButton>
   );
 }
 
-function AddForm({ currentCart }: TypeCurrentCart) {
+function AddForm({ handleClearAfterPurchase, currentCart }: AddFormProps) {
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
   const cartId = String(currentCart?.id);
-  const [cartItem, setCartItem] = useState<Cart | null>(null);
+  const [cartItem, setCartItem] = useState<Cart | "loading" | null>(null);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
   const [openPurchaseDialog, setOpenPurchaseDialog] = useState(false);
@@ -70,6 +82,15 @@ function AddForm({ currentCart }: TypeCurrentCart) {
     product_id: number;
     quantity: number;
   } | null>(null);
+
+  const quantityRef = useRef<HTMLInputElement>(null);
+  const barcodeRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (cartId) {
+      fetchCartItems();
+    }
+  }, [cartId]);
 
   const handleClickOpenUpdateDialog = (item: {
     product_id: number;
@@ -89,10 +110,16 @@ function AddForm({ currentCart }: TypeCurrentCart) {
   };
 
   const handleClosePurchaseDialog = () => {
+    if (paymentData) {
+      handleClearAfterPurchase();
+      setPaymentData(null);
+    }
+
     setOpenPurchaseDialog(false);
   };
 
   const fetchCartItems = async () => {
+    setCartItem("loading");
     try {
       const response = await fetch(`/api/cart-item?cartId=${cartId}`);
 
@@ -112,17 +139,54 @@ function AddForm({ currentCart }: TypeCurrentCart) {
       }
     } catch (err: any) {
       enqueueSnackbar(err.message, { variant: "error" });
+      setCartItem(null);
     }
   };
 
   const handleUpdateItem = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (selectedItem) {
-      const formData = new FormData(event.currentTarget);
-      const quantity = Number(formData.get("quantity"));
-      await updateItemInCart(cartId, selectedItem.product_id, quantity);
+
+    if (!selectedItem) {
+      enqueueSnackbar("No item selected for update.", { variant: "error" });
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const quantity = Number(formData.get("quantity"));
+
+    // Validate quantity
+    if (isNaN(quantity) || quantity <= 0) {
+      enqueueSnackbar("Please enter a valid quantity greater than 0.", {
+        variant: "warning",
+      });
+      return;
+    }
+
+    try {
+      // Update the item in the cart
+      const response = await updateItemInCart(
+        cartId,
+        selectedItem.product_id,
+        quantity
+      );
+
+      if (response.status !== 200) {
+        throw new Error("Failed to update item.");
+      }
+
+      enqueueSnackbar("Item updated successfully.", { variant: "success" });
+
+      // Refetch cart items to reflect the update
+      fetchCartItems();
+    } catch (error: any) {
+      enqueueSnackbar(
+        error.message || "An error occurred while updating the item.",
+        {
+          variant: "error",
+        }
+      );
+    } finally {
       handleCloseUpdateDialog();
-      fetchCartItems(); // Refetch data after update
     }
   };
 
@@ -143,21 +207,15 @@ function AddForm({ currentCart }: TypeCurrentCart) {
     }
   };
 
-  useEffect(() => {
-    if (cartId) {
-      fetchCartItems();
-    }
-  }, [cartId]);
-
   const handleAddProductToCart = async (formData: FormData) => {
     try {
       const response = await addItemToCart(formData, cartId!);
 
       if (response.status === 200) {
         fetchCartItems(); // Refetch data after adding product
+        enqueueSnackbar(response.message, { variant: "success" });
       } else {
-        if ("message" in response)
-          enqueueSnackbar(response.message, { variant: "error" });
+        enqueueSnackbar(response.message, { variant: "error" });
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -165,11 +223,17 @@ function AddForm({ currentCart }: TypeCurrentCart) {
       } else {
         enqueueSnackbar("An unknown error occurred", { variant: "error" });
       }
+    } finally {
+      if (quantityRef.current) quantityRef.current.value = "1";
+      if (barcodeRef.current) barcodeRef.current.value = "";
     }
   };
 
-  const handlePurchase = async (formData: FormData) => {
+  const handlePurchase = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     try {
+      const formData = new FormData(event.currentTarget);
+
       const response = await purchasingCart(formData, cartId!);
       if (response.status === 200) {
         setCartItem(null);
@@ -179,7 +243,7 @@ function AddForm({ currentCart }: TypeCurrentCart) {
 
         enqueueSnackbar("Purchase successful", { variant: "success" });
       } else {
-        enqueueSnackbar("Something error", { variant: "error" });
+        enqueueSnackbar(response.message, { variant: "error" });
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -190,57 +254,64 @@ function AddForm({ currentCart }: TypeCurrentCart) {
     }
   };
 
-  console.log("cartItem", cartItem);
-
   return (
     <>
       <Box component="form" action={handleAddProductToCart} mt={1}>
-        <TextField
-          name="quantity"
-          type="number"
-          defaultValue={1}
-          label="Quantity"
-          id="input-quantity"
-          size="small"
-          fullWidth
-          required
-          sx={{ mb: 1 }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <PinRoundedIcon />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+        <FormControl sx={{ width: "100%" }} variant="outlined">
+          <OutlinedInput
+            size="small"
+            id="quantity"
+            name="quantity"
+            placeholder="Quantity"
+            required
+            type="number"
+            defaultValue={1}
+            inputRef={quantityRef}
+            sx={{ flexGrow: 1 }}
+            startAdornment={
+              <InputAdornment position="start" sx={{ color: "text.primary" }}>
+                <PinRoundedIcon fontSize="small" />
+              </InputAdornment>
+            }
+            inputProps={{
+              "aria-label": "quantity",
+            }}
+          />
+        </FormControl>
 
-        <TextField
-          name="barcode"
-          label="Barcode"
-          id="input-barcode"
-          size="small"
-          fullWidth
-          required
-          sx={{ mb: 1 }}
-          slotProps={{
-            input: {
-              startAdornment: (
-                <InputAdornment position="start">
-                  <DocumentScannerIcon />
-                </InputAdornment>
-              ),
-            },
-          }}
-        />
+        <FormControl sx={{ width: "100%", mt: 1 }} variant="outlined">
+          <OutlinedInput
+            size="small"
+            id="barcode"
+            name="barcode"
+            placeholder="Barcode"
+            required
+            inputRef={barcodeRef}
+            sx={{ flexGrow: 1 }}
+            startAdornment={
+              <InputAdornment position="start" sx={{ color: "text.primary" }}>
+                <DocumentScannerIcon fontSize="small" />
+              </InputAdornment>
+            }
+            inputProps={{
+              "aria-label": "barcode",
+            }}
+          />
+        </FormControl>
+
         <SubmitButton />
       </Box>
 
       <Divider sx={{ my: 2 }} />
 
-      {cartItem?.items &&
-        cartItem.items.map((item) => (
+      {cartItem === "loading" ? (
+        <CardItemListSkeleton />
+      ) : cartItem?.items?.length === 0 ? (
+        <Alert severity="info" color="info" variant="outlined">
+          No item product.
+        </Alert>
+      ) : (
+        cartItem?.items?.map((item) => (
           <Stack
             key={item.id}
             direction="row"
@@ -301,23 +372,29 @@ function AddForm({ currentCart }: TypeCurrentCart) {
               </Stack>
             </Box>
           </Stack>
-        ))}
+        ))
+      )}
 
       <Box
         sx={{
           position: "sticky",
           bottom: 0,
           width: "100%",
-          backgroundColor: "background.paper",
-          paddingY: 2,
+          pt: 7,
+          background: (theme) =>
+            `linear-gradient(to top, ${theme.palette.background.paper} 60%, transparent 100%)`,
         }}
       >
         <Typography variant="subtitle1" color="text.primary">
-          Total Items: {cartItem?.items?.length}
+          Total Items: {cartItem !== "loading" && cartItem?.items?.length}
         </Typography>
         <Typography variant="subtitle1" color="text.primary">
           Total Price:{" "}
-          <strong>{formatToRupiah(cartItem?.total_purchase ?? 0)}</strong>
+          <strong>
+            {formatToRupiah(
+              cartItem !== "loading" && cartItem ? cartItem.total_purchase : 0
+            )}
+          </strong>
         </Typography>
 
         <Button
@@ -326,7 +403,7 @@ function AddForm({ currentCart }: TypeCurrentCart) {
           variant="contained"
           onClick={handleClickOpenPurchaseDialog}
         >
-          Purchase
+          Purchase {cartId}
         </Button>
       </Box>
 
@@ -341,85 +418,95 @@ function AddForm({ currentCart }: TypeCurrentCart) {
       >
         <DialogTitle>Update Quantity</DialogTitle>
         <DialogContent>
-          <TextField
-            name="quantity"
-            type="number"
-            label="Quantity"
-            defaultValue={selectedItem?.quantity}
-            size="small"
-            variant="outlined"
-            required
-            fullWidth
-            sx={{ my: 2 }}
-          />
+          <FormControl fullWidth>
+            <TextField
+              type="number"
+              id="quantity"
+              name="quantity"
+              placeholder="Quantity"
+              autoComplete="quantity"
+              autoFocus
+              required
+              fullWidth
+              variant="outlined"
+              defaultValue={selectedItem?.quantity}
+            />
+          </FormControl>
           <SubmitButton />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseUpdateDialog}>Cancel</Button>
+          <Button onClick={handleCloseUpdateDialog} variant="outlined">
+            Cancel
+          </Button>
         </DialogActions>
       </Dialog>
 
-      <Dialog
-        open={openPurchaseDialog}
-        onClose={handleClosePurchaseDialog}
-        closeAfterTransition={false}
-        PaperProps={{
-          component: "form",
-          onSubmit: async (event: React.FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            const formData = new FormData(event.currentTarget);
-            await handlePurchase(formData); // Call handlePurchase with formData
-            handleClosePurchaseDialog();
-          },
-        }}
-      >
-        <DialogTitle>Purchase</DialogTitle>
+      <Dialog open={openPurchaseDialog} closeAfterTransition={false}>
+        <DialogTitle>Confirm Purchase</DialogTitle>
         <DialogContent>
-          <Box
-            rowGap={2.5}
-            columnGap={1}
-            display="grid"
-            gridTemplateColumns={{
-              xs: "repeat(1, 1fr)",
-              md: "repeat(3, 1fr)",
-            }}
-            paddingY={2}
-          >
-            <FormControl fullWidth>
-              <InputLabel id="select-payment-method">Payment Method</InputLabel>
-              <Select
-                labelId="select-payment-method"
-                name="payment_method"
-                label="Payment Method"
-                size="small"
-                required
-                defaultValue={"cash"}
-              >
-                <MenuItem value="cash">cash</MenuItem>
-                <MenuItem value="credit-card">credit-card</MenuItem>
-                <MenuItem value="ewallet">ewallet</MenuItem>
-                <MenuItem value="other">other</MenuItem>
-              </Select>
-            </FormControl>
+          {paymentData ? (
+            <PaymentReceiptPreview data={paymentData} />
+          ) : (
+            <Box
+              component="form"
+              onSubmit={handlePurchase}
+              rowGap={2.5}
+              columnGap={1}
+              display="grid"
+              gridTemplateColumns={{
+                xs: "repeat(1, 1fr)",
+                // md: "repeat(2, 1fr)",
+              }}
+              paddingY={2}
+            >
+              <FormControl fullWidth>
+                <FormLabel htmlFor="select-payment-method">
+                  Payment Method
+                </FormLabel>
+                <Select
+                  labelId="select-payment-method"
+                  name="payment_method"
+                  label="Payment Method"
+                  size="small"
+                  required
+                  defaultValue={"cash"}
+                >
+                  <MenuItem value="cash">cash</MenuItem>
+                  <MenuItem value="credit-card" disabled>
+                    credit-card
+                  </MenuItem>
+                  <MenuItem value="ewallet" disabled>
+                    ewallet
+                  </MenuItem>
+                  <MenuItem value="other" disabled>
+                    other
+                  </MenuItem>
+                </Select>
+              </FormControl>
 
-            <TextField
-              type="number"
-              name="paid"
-              label="Paid"
-              size="small"
-              variant="outlined"
-              required
-            />
-
-            <SubmitButton />
-          </Box>
+              <FormControl>
+                <FormLabel htmlFor="paid">Paid</FormLabel>
+                <TextField
+                  id="paid"
+                  type="number"
+                  name="paid"
+                  placeholder="0"
+                  autoFocus
+                  required
+                  fullWidth
+                  variant="outlined"
+                />
+              </FormControl>
+              <SubmitButton />
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClosePurchaseDialog}>Cancel</Button>
+          <Button onClick={handleClosePurchaseDialog} variant="outlined">
+            Cancel
+          </Button>
         </DialogActions>
       </Dialog>
-
-      {paymentData && <PaymentReceiptPreview data={paymentData} />}
     </>
   );
 }

@@ -1,7 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 
-export default function DashboardLayout({
+export default function HistoryLayout({
   children,
 }: {
   children: React.ReactNode;

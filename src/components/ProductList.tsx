@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CardProduct from "./card/CardProduct";
-import { Box, Grid2 } from "@mui/material";
+import { Alert, Box, Grid2 } from "@mui/material";
 import { CardProductProps } from "@/types/product";
+import ProductListSkeleton from "./buffering/list-product";
 
 interface ProductResponse {
   data: CardProductProps[];
@@ -40,7 +41,9 @@ export default function ProductList() {
           setProducts(data.data);
         }
       } catch (err: any) {
-        setError(err.message);
+        setError(
+          err.message || "Failed to fetch products, please try again later."
+        );
       } finally {
         setLoading(false);
       }
@@ -49,12 +52,17 @@ export default function ProductList() {
     fetchProducts();
   }, [router]);
 
-  if (loading) return <div>Loading products...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <ProductListSkeleton />;
+  if (error)
+    return (
+      <Alert severity="error" color="error" variant="outlined">
+        {error}
+      </Alert>
+    );
 
   return (
     <>
-      <Box sx={{ flexGrow: 1 }}>
+      <Box sx={{ flexGrow: 1, pt: 2 }}>
         <Grid2
           container
           spacing={{ xs: 2, md: 3 }}

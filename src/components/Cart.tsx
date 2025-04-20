@@ -2,8 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Chip, Stack } from "@mui/material";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Stack,
+} from "@mui/material";
 import AddForm from "./form/cart/add-form";
+import { deleteAvailableCart } from "@/app/dashboard/action";
+import { enqueueSnackbar } from "notistack";
 
 interface CartItem {
   id: number;
@@ -23,6 +36,11 @@ export default function Cart() {
   const [currentCart, setCurrentCart] = useState<CartItem | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState<{
+    open: boolean;
+    cartId: number | null;
+  }>({ open: false, cartId: null });
+
   const router = useRouter();
 
   useEffect(() => {
@@ -44,9 +62,7 @@ export default function Cart() {
       }
 
       const data: CartData = await response.json();
-      if (data?.data) {
-        setCart(data?.data);
-      }
+      setCart(data?.data);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -68,11 +84,12 @@ export default function Cart() {
         body: JSON.stringify(dataToPost),
       });
 
-      const data: CartData = await response.json();
+      const data = await response.json();
 
       if (data?.data) {
         fetchAvailableCart();
-        setCurrentCart(data?.data[0]);
+        console.log("Hallloo: ", data);
+        setCurrentCart(data?.data);
       }
     } catch (err: any) {
       setError(err.message);
@@ -81,12 +98,53 @@ export default function Cart() {
 
   const handleChooseCart = (item: CartItem) => setCurrentCart(item);
 
-  const handleDelete = () => {
-    console.info("You clicked the delete icon.");
+  const handleClearAfterPurchase = () => {
+    setCurrentCart(null);
+    fetchAvailableCart();
   };
 
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  const handleConfirmDelete = async () => {
+    if (openDeleteDialog.cartId !== null) {
+      try {
+        const response = await deleteAvailableCart(openDeleteDialog.cartId);
+
+        if (response.status !== 200) {
+          throw new Error(response.message || "Failed to delete item");
+        }
+
+        enqueueSnackbar(response.message, { variant: "success" });
+        fetchAvailableCart();
+      } catch (error: any) {
+        enqueueSnackbar(error.message || "An error occurred", {
+          variant: "error",
+        });
+      } finally {
+        setOpenDeleteDialog({ open: false, cartId: null });
+      }
+    }
+  };
+
+  const handleOpenDeleteDialog = (cartId: number) => {
+    setOpenDeleteDialog({ open: true, cartId });
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setOpenDeleteDialog({ open: false, cartId: null });
+  };
+
+  if (loading)
+    return (
+      <Box sx={{ textAlign: "center", padding: 2 }}>
+        <CircularProgress size={30} />
+      </Box>
+    );
+
+  if (error)
+    return (
+      <Alert severity="error" color="error" variant="outlined">
+        {error}
+      </Alert>
+    );
 
   return (
     <Box
@@ -106,7 +164,7 @@ export default function Cart() {
         fullWidth
         onClick={handleCreateCart}
       >
-        Create Cart
+        New Cart
       </Button>
 
       <Stack
@@ -130,13 +188,38 @@ export default function Cart() {
               size="small"
               disabled={item.id === currentCart?.id}
               onClick={() => handleChooseCart(item)}
-              onDelete={handleDelete}
+              onDelete={() => handleOpenDeleteDialog(item.id)}
               color="primary"
             />
           ))}
       </Stack>
 
-      {currentCart?.id && <AddForm currentCart={currentCart} />}
+      {currentCart?.id && (
+        <AddForm
+          handleClearAfterPurchase={handleClearAfterPurchase}
+          currentCart={currentCart}
+        />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={openDeleteDialog.open} onClose={handleCloseDeleteDialog}>
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          Are you sure you want to delete this cart?
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDeleteDialog} variant="outlined">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+          >
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

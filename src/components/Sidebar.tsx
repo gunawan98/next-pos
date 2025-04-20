@@ -1,15 +1,16 @@
 "use client";
 
 import React from "react";
-import { Drawer, Box, IconButton, Typography } from "@mui/material";
+import { Drawer, Box, IconButton } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
-import ThemeToggleButton from "./ThemeToggleButton";
-import { useThemeContext } from "@/context/ThemeContext";
+import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
+import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import ColorModeSelect from "@/theme/ColorModeSelect";
+import Link from "next/link";
 
-export default function Navbar() {
-  const { setThemeMode } = useThemeContext();
+export default function Sidebar() {
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -58,10 +59,26 @@ export default function Navbar() {
             margin: "0 auto",
           }}
         />
+
+        <Link href="/dashboard">
+          <IconButton color="inherit" sx={{ marginTop: 2 }}>
+            <PointOfSaleRoundedIcon />
+          </IconButton>
+        </Link>
+        <Link href="/history">
+          <IconButton color="inherit" sx={{ marginTop: 2 }}>
+            <UpdateRoundedIcon />
+          </IconButton>
+        </Link>
       </Box>
+
       <Box sx={{ textAlign: "center", paddingBottom: 2 }}>
-        <ThemeToggleButton onToggle={setThemeMode} />
-        <IconButton onClick={handleLogout} color="inherit">
+        <ColorModeSelect />
+        <IconButton
+          onClick={handleLogout}
+          color="inherit"
+          sx={{ marginTop: 2 }}
+        >
           <LogoutIcon />
         </IconButton>
       </Box>

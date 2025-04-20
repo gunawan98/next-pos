@@ -17,11 +17,9 @@ interface Cart {
 	items: CartItem[];
 }
 
-interface TypeCurrentCart {
-	currentCart: {
-		id: number;
-		completed: boolean;
-	} | null;
+type TypeCurrentCart = {
+	id: number;
+	completed: boolean;
 }
 
 type Item = {

@@ -11,18 +11,18 @@ import { formatToRupiah } from "@/utils/currency";
 
 export default function CardProduct(product: CardProductProps) {
   return (
-    <Card>
-      <CardActionArea disableRipple={true}>
+    <CardActionArea disableRipple={true}>
+      <Card>
         <CardMedia
           component="img"
-          height="194"
+          height="180"
           image={
             product.images.length
               ? product.images[0]
               : "/images/no-image-product.webp"
           }
           alt={product.name}
-          sx={{ padding: 1 }}
+          sx={{ mb: 1 }}
         />
 
         <CardContent>
@@ -43,7 +43,7 @@ export default function CardProduct(product: CardProductProps) {
             {formatToRupiah(product.price)}
           </Typography>
         </CardContent>
-      </CardActionArea>
-    </Card>
+      </Card>
+    </CardActionArea>
   );
 }

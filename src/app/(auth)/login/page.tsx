@@ -3,9 +3,7 @@
 import * as React from "react";
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import Head from "next/head";
 import Box from "@mui/material/Box";
-import Button from "@mui/material/Button";
 import FormLabel from "@mui/material/FormLabel";
 import FormControl from "@mui/material/FormControl";
 import TextField from "@mui/material/TextField";
@@ -13,6 +11,8 @@ import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import MuiCard from "@mui/material/Card";
 import { styled } from "@mui/material/styles";
+import { LoadingButton } from "@mui/lab";
+import { useSnackbar } from "notistack";
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: "flex",
@@ -59,11 +59,13 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
 export default function Login() {
   const [username, setUsername] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-
+    setIsLoading(true);
     const response = await fetch("/api/login", {
       method: "POST",
       headers: {
@@ -75,73 +77,79 @@ export default function Login() {
     if (response.ok) {
       router.push("/dashboard");
     } else {
-      alert("Login failed");
+      enqueueSnackbar("Login failed.", { variant: "error" });
     }
+    setIsLoading(false);
   };
 
   return (
-    <>
-      <Head>
-        <title>Log in to app</title>
-      </Head>
-      <SignInContainer direction="column" justifyContent="space-between">
-        <Card variant="outlined">
-          <Typography
-            component="h1"
-            variant="h4"
-            sx={{ width: "100%", fontSize: "clamp(2rem, 10vw, 2.15rem)" }}
-          >
-            Sign in
-          </Typography>
-          <Box
-            component="form"
-            onSubmit={handleLogin}
-            noValidate
+    <SignInContainer direction="column" justifyContent="space-between">
+      <Card variant="outlined">
+        <Typography
+          component="h1"
+          variant="h4"
+          sx={{ width: "100%", fontSize: "clamp(2rem, 10vw, 2.15rem)" }}
+        >
+          Sign in
+        </Typography>
+        <Box
+          component="form"
+          onSubmit={handleLogin}
+          noValidate
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            width: "100%",
+            gap: 2,
+          }}
+        >
+          <FormControl>
+            <FormLabel htmlFor="username">Username</FormLabel>
+            <TextField
+              id="username"
+              name="username"
+              placeholder="username"
+              autoComplete="username"
+              autoFocus
+              required
+              fullWidth
+              variant="outlined"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel htmlFor="password">Password</FormLabel>
+            <TextField
+              name="password"
+              placeholder="••••••"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              autoFocus
+              required
+              fullWidth
+              variant="outlined"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </FormControl>
+          <LoadingButton
+            type="submit"
+            fullWidth
+            variant="contained"
+            loading={isLoading}
             sx={{
-              display: "flex",
-              flexDirection: "column",
-              width: "100%",
-              gap: 2,
+              "& .MuiLoadingButton-loadingIndicator": {
+                color: (theme) =>
+                  theme.palette.mode === "dark" ? "black" : "white", // Dynamic spinner color
+              },
             }}
           >
-            <FormControl>
-              <FormLabel htmlFor="username">Email</FormLabel>
-              <TextField
-                id="username"
-                type="username"
-                name="username"
-                placeholder="username"
-                autoComplete="username"
-                autoFocus
-                required
-                fullWidth
-                variant="outlined"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-              />
-            </FormControl>
-            <FormControl>
-              <FormLabel htmlFor="password">Password</FormLabel>
-              <TextField
-                name="password"
-                placeholder="••••••"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                autoFocus
-                required
-                fullWidth
-                variant="outlined"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </FormControl>
-            <Button type="submit" fullWidth variant="contained">
-              Sign in
-            </Button>
-          </Box>
-        </Card>
-      </SignInContainer>
-    </>
+            Sign in
+          </LoadingButton>
+        </Box>
+      </Card>
+    </SignInContainer>
   );
 }

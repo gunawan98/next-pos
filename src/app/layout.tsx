@@ -1,18 +1,9 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
 import ClientSnackbarProvider from "@/context/SnackbarProvider";
-
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
-});
+import AppTheme from "@/theme/AppTheme";
+import Sidebar from "@/components/Sidebar";
+import "./global.css";
+import { Box } from "@mui/material";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -26,8 +17,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <ClientSnackbarProvider>{children}</ClientSnackbarProvider>
+      <body>
+        <AppTheme>
+          <ClientSnackbarProvider>
+            <Box sx={{ display: "flex" }}>
+              <Sidebar />
+              {children}
+            </Box>
+          </ClientSnackbarProvider>
+        </AppTheme>
       </body>
     </html>
   );

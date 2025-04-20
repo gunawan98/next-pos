@@ -1,8 +1,6 @@
-"use client";
-
-import React, { useState } from "react";
+import * as React from "react";
+import { useColorScheme } from "@mui/material/styles";
 import {
-  Button,
   Popover,
   ListItemIcon,
   ListItemText,
@@ -12,15 +10,10 @@ import {
 import SettingsBrightnessIcon from "@mui/icons-material/SettingsBrightness";
 import LightModeRoundedIcon from "@mui/icons-material/LightModeRounded";
 import NightsStayRoundedIcon from "@mui/icons-material/NightsStayRounded";
-import { useThemeContext } from "@/context/ThemeContext";
 
-export default function ThemeToggleButton({
-  onToggle,
-}: {
-  onToggle: (mode: "light" | "dark" | "system") => void;
-}) {
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const { themeMode } = useThemeContext();
+export default function ColorModeSelect() {
+  const { mode, setMode } = useColorScheme();
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -30,8 +23,8 @@ export default function ThemeToggleButton({
     setAnchorEl(null);
   };
 
-  const handleToggle = (mode: "light" | "dark" | "system") => {
-    onToggle(mode);
+  const handleToggle = (choosedMode: "light" | "dark" | "system") => {
+    setMode(choosedMode);
     handleClose();
   };
 
@@ -39,7 +32,7 @@ export default function ThemeToggleButton({
   const id = open ? "simple-popover" : undefined;
 
   const getIcon = () => {
-    switch (themeMode) {
+    switch (mode) {
       case "light":
         return <LightModeRoundedIcon />;
       case "dark":
@@ -48,6 +41,10 @@ export default function ThemeToggleButton({
         return <SettingsBrightnessIcon />;
     }
   };
+
+  if (!mode) {
+    return null;
+  }
 
   return (
     <>
