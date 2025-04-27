@@ -12,17 +12,17 @@ import { formatToRupiah } from "@/utils/currency";
 export default function CardProduct(product: CardProductProps) {
   return (
     <CardActionArea disableRipple={true}>
-      <Card>
+      <Card sx={{ padding: 1 }}>
         <CardMedia
           component="img"
-          height="180"
+          height="160"
           image={
             product.images.length
               ? product.images[0]
               : "/images/no-image-product.webp"
           }
           alt={product.name}
-          sx={{ mb: 1 }}
+          sx={{ mb: 1, borderRadius: 0.5 }}
         />
 
         <CardContent>
@@ -32,7 +32,7 @@ export default function CardProduct(product: CardProductProps) {
             variant="filled"
             color="secondary"
             size="small"
-            sx={{ padding: 1, position: "absolute", top: 10, right: 10 }}
+            sx={{ padding: 1, position: "absolute", top: 15, right: 15 }}
           />
 
           <Typography variant="subtitle1" color="text.primary" noWrap>

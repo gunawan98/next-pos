@@ -19,6 +19,7 @@ import {
   TextField,
 } from "@mui/material";
 import { CardProductProps as ProductProps } from "@/types/product";
+import { formatToRupiah } from "@/utils/currency";
 
 interface ProductResponse {
   data: ProductProps[];
@@ -101,7 +102,15 @@ export default function ProductTable() {
 
   const columns: GridColDef[] = [
     { field: "name", headerName: "Name", flex: 1, minWidth: 200 },
-    { field: "price", headerName: "Price", flex: 1, minWidth: 100 },
+    {
+      field: "price",
+      headerName: "Price",
+      flex: 1,
+      minWidth: 100,
+      valueFormatter: (params) => {
+        return formatToRupiah(params);
+      },
+    },
     { field: "barcode", headerName: "Barcode", flex: 1, minWidth: 150 },
     {
       field: "stock",

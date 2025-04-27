@@ -12,9 +12,9 @@ interface Cart {
 	id: string;
 	cashier_id: string;
 	completed: boolean;
-	total_purchase: number;
 	created_at: Date;
-	items: CartItem[];
+	total_purchase?: number;
+	items?: CartItem[];
 }
 
 type TypeCurrentCart = {

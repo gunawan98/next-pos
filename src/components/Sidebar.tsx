@@ -5,6 +5,7 @@ import { Drawer, Box, IconButton } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
 import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
+import InventoryRoundedIcon from "@mui/icons-material/InventoryRounded";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ColorModeSelect from "@/theme/ColorModeSelect";
@@ -68,6 +69,11 @@ export default function Sidebar() {
         <Link href="/history">
           <IconButton color="inherit" sx={{ marginTop: 2 }}>
             <UpdateRoundedIcon />
+          </IconButton>
+        </Link>
+        <Link href="/product">
+          <IconButton color="inherit" sx={{ marginTop: 2 }}>
+            <InventoryRoundedIcon />
           </IconButton>
         </Link>
       </Box>

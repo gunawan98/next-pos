@@ -66,7 +66,7 @@ export default function ProductList() {
         <Grid2
           container
           spacing={{ xs: 2, md: 3 }}
-          columns={{ xs: 4, sm: 6, md: 8 }}
+          columns={{ xs: 4, sm: 6, md: 10 }}
         >
           {products &&
             products.map((product) => (

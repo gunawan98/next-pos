@@ -1,27 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import {
-  DataGrid,
-  GridActionsCellItem,
-  GridColDef,
-  GridPaginationModel,
-} from "@mui/x-data-grid";
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  TextField,
-} from "@mui/material";
-import { CardProductProps as ProductProps } from "@/types/product";
+import { DataGrid, GridColDef, GridPaginationModel } from "@mui/x-data-grid";
+import { Alert, Box, Button, CircularProgress } from "@mui/material";
+import Grid from "@mui/material/Grid2";
+import { Cart } from "@/types/cart";
+import DetailCart from "../section/history/DetailCart";
 
-interface ProductResponse {
-  data: ProductProps[];
+interface CartResponse {
+  data: Cart[];
   metadata: {
     count: number;
     has_next: boolean;
@@ -33,7 +20,8 @@ interface ProductResponse {
 }
 
 export default function PaymentHistoryTable() {
-  const [products, setProducts] = useState<ProductProps[]>([]);
+  const [carts, setCarts] = useState<Cart[]>([]);
+  const [chooseCartId, setChooseCartId] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -42,82 +30,73 @@ export default function PaymentHistoryTable() {
   });
   const [totalRows, setTotalRows] = useState<number>(0);
 
-  // Dialog states
-  const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
-  const [openDeleteDialog, setOpenDeleteDialog] = useState<boolean>(false);
-  const [selectedProduct, setSelectedProduct] = useState<ProductProps | null>(
-    null
-  );
-
-  const fetchProducts = async (page: number, pageSize: number) => {
+  const fetchFinishedCart = async (page: number, pageSize: number) => {
     setLoading(true);
     setError(null);
 
     try {
       const response = await fetch(
-        `/api/product?page=${page + 1}&per_page=${pageSize}`
+        `/api/cart/finished?page=${page + 1}&pageSize=${pageSize}`
       );
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fetch products");
+        throw new Error(errorData.message || "Failed to fetch carts");
       }
 
-      const data: ProductResponse = await response.json();
-      setProducts(data.data);
+      const data: CartResponse = await response.json();
+
+      setCarts(data.data);
       setTotalRows(data.metadata.total);
     } catch (err: any) {
-      setError(err.message || "Failed to fetch products");
+      setError(err.message || "Failed to fetch carts");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts(paginationModel.page, paginationModel.pageSize);
+    fetchFinishedCart(paginationModel.page, paginationModel.pageSize);
   }, [paginationModel]);
 
-  const handleEditClick = (product: ProductProps) => {
-    setSelectedProduct(product);
-    setOpenEditDialog(true);
-  };
-
-  const handleDeleteClick = (product: ProductProps) => {
-    setSelectedProduct(product);
-    setOpenDeleteDialog(true);
-  };
-
-  const handleUpdateProduct = () => {
-    // Logic to update the product
-    console.log("Updating product:", selectedProduct);
-    setOpenEditDialog(false);
-  };
-
-  const handleDeleteProduct = () => {
-    // Logic to delete the product
-    console.log("Deleting product:", selectedProduct);
-    setOpenDeleteDialog(false);
+  const handleChooseCart = (id: number) => {
+    setChooseCartId(id);
   };
 
   const columns: GridColDef[] = [
-    { field: "name", headerName: "Name", flex: 1, minWidth: 200 },
-    { field: "price", headerName: "Price", flex: 1, minWidth: 100 },
-    { field: "barcode", headerName: "Barcode", flex: 1, minWidth: 150 },
     {
-      field: "stock",
-      headerName: "Stock",
-      headerAlign: "right",
-      align: "right",
-      flex: 0.5,
-      minWidth: 50,
+      field: "created_at",
+      headerName: "Created At",
+      flex: 1,
+      minWidth: 200,
+      renderCell: (params) => {
+        const date = new Date(params.row.created_at);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        const seconds = String(date.getSeconds()).padStart(2, "0");
+
+        return `${year}-${month}-${day} / ${hours}:${minutes}:${seconds}`;
+      },
     },
+    { field: "cashier_id", headerName: "Cashier ID", flex: 1, minWidth: 100 },
     {
-      field: "discount",
-      headerName: "Discount",
-      headerAlign: "right",
-      align: "right",
-      flex: 0.5,
-      minWidth: 80,
+      field: "actions",
+      headerName: "Actions",
+      type: "actions",
+      width: 150,
+      renderCell: (params) => (
+        <Button
+          variant="contained"
+          size="small"
+          color="primary"
+          onClick={() => handleChooseCart(params.row.id)}
+        >
+          Detail
+        </Button>
+      ),
     },
   ];
 
@@ -136,86 +115,26 @@ export default function PaymentHistoryTable() {
     );
 
   return (
-    <Box sx={{ height: 600, width: "100%" }}>
-      <DataGrid
-        rows={products}
-        columns={columns}
-        rowCount={totalRows}
-        // getRowClassName={(params) =>
-        //   params.indexRelativeToCurrentPage % 2 === 0 ? "even" : "odd"
-        // }
-        initialState={{
-          pagination: { paginationModel: { pageSize: 20 } },
-        }}
-        pagination
-        paginationMode="server"
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[10, 20, 50]}
-        loading={loading}
-        // density="compact"
-      />
-
-      {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)}>
-        <DialogTitle>Edit Product</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Name"
-            fullWidth
-            margin="dense"
-            value={selectedProduct?.name || ""}
-            onChange={(e) =>
-              setSelectedProduct((prev) =>
-                prev ? { ...prev, name: e.target.value } : null
-              )
-            }
-          />
-          <TextField
-            label="Price"
-            fullWidth
-            margin="dense"
-            type="number"
-            value={selectedProduct?.price || ""}
-            onChange={(e) =>
-              setSelectedProduct((prev) =>
-                prev ? { ...prev, price: parseFloat(e.target.value) } : null
-              )
-            }
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEditDialog(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button onClick={handleUpdateProduct} variant="contained">
-            Update
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={openDeleteDialog}
-        onClose={() => setOpenDeleteDialog(false)}
-      >
-        <DialogTitle>Confirm Delete</DialogTitle>
-        <DialogContent>
-          Are you sure you want to delete the product "{selectedProduct?.name}"?
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteDialog(false)} variant="outlined">
-            Cancel
-          </Button>
-          <Button
-            onClick={handleDeleteProduct}
-            variant="contained"
-            color="error"
-          >
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+    <Grid container spacing={4} columns={12}>
+      <Grid size={{ xs: 12, lg: 7 }}>
+        <DataGrid
+          rows={carts}
+          columns={columns}
+          rowCount={totalRows}
+          initialState={{
+            pagination: { paginationModel: { pageSize: 20 } },
+          }}
+          pagination
+          paginationMode="server"
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          pageSizeOptions={[10, 20, 50]}
+          loading={loading}
+        />
+      </Grid>
+      <Grid size={{ xs: 12, lg: 4 }}>
+        <DetailCart cartId={chooseCartId} />
+      </Grid>
+    </Grid>
   );
 }

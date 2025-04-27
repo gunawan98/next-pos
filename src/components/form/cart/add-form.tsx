@@ -130,7 +130,7 @@ function AddForm({ handleClearAfterPurchase, currentCart }: AddFormProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to fetch products");
+        throw new Error(errorData.message || "Failed to fetch cart items.");
       }
 
       const data = await response.json();
@@ -392,7 +392,9 @@ function AddForm({ handleClearAfterPurchase, currentCart }: AddFormProps) {
           Total Price:{" "}
           <strong>
             {formatToRupiah(
-              cartItem !== "loading" && cartItem ? cartItem.total_purchase : 0
+              cartItem !== "loading" && cartItem
+                ? cartItem.total_purchase ?? 0
+                : 0
             )}
           </strong>
         </Typography>
