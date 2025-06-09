@@ -1,14 +1,11 @@
 "use server";
 
 import { validateAndRefreshToken } from "@/lib/validate_token";
+import { ApiResponse } from "@/types/api-response";
 import { cookies } from "next/headers";
 import { z } from "zod";
 
-export interface ApiResponse {
-	message: string;
-	status: number;
-	data?: any;
-}
+
 
 export async function addItemToCart(formData: FormData, cartId: string) {
 	const schema = z.object({

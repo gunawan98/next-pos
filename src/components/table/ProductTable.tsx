@@ -16,10 +16,13 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  TextField,
 } from "@mui/material";
 import { CardProductProps as ProductProps } from "@/types/product";
 import { formatToRupiah } from "@/utils/currency";
+import UpdateProductForm from "../section/product/UpdateProductForm";
+import CreateNewProduct from "../section/product/CreateNewProduct";
+import { enqueueSnackbar } from "notistack";
+import { deleteProduct } from "@/app/product/action";
 
 interface ProductResponse {
   data: ProductProps[];
@@ -42,6 +45,7 @@ export default function ProductTable() {
     pageSize: 20,
   });
   const [totalRows, setTotalRows] = useState<number>(0);
+  const [loadingDelete, setLoadingDelete] = useState<boolean>(false);
 
   // Dialog states
   const [openEditDialog, setOpenEditDialog] = useState<boolean>(false);
@@ -78,9 +82,21 @@ export default function ProductTable() {
     fetchProducts(paginationModel.page, paginationModel.pageSize);
   }, [paginationModel]);
 
+  const handleRefetchProducts = () => {
+    fetchProducts(0, paginationModel.pageSize);
+  };
+
   const handleEditClick = (product: ProductProps) => {
     setSelectedProduct(product);
     setOpenEditDialog(true);
+  };
+
+  const handleUpdateProductInState = (updatedProduct: ProductProps) => {
+    setProducts((prevProducts) =>
+      prevProducts.map((product) =>
+        product.id === updatedProduct.id ? updatedProduct : product
+      )
+    );
   };
 
   const handleDeleteClick = (product: ProductProps) => {
@@ -88,16 +104,37 @@ export default function ProductTable() {
     setOpenDeleteDialog(true);
   };
 
-  const handleUpdateProduct = () => {
-    // Logic to update the product
-    console.log("Updating product:", selectedProduct);
-    setOpenEditDialog(false);
-  };
+  const handleDeleteProduct = async () => {
+    try {
+      setLoadingDelete(true);
+      if (!selectedProduct) {
+        enqueueSnackbar("No product selected for deletion.", {
+          variant: "error",
+        });
+        return;
+      }
+      const response = await deleteProduct(selectedProduct.id);
 
-  const handleDeleteProduct = () => {
-    // Logic to delete the product
-    console.log("Deleting product:", selectedProduct);
-    setOpenDeleteDialog(false);
+      if (response.status !== 200) {
+        enqueueSnackbar(response.message, { variant: "error" });
+        return;
+      }
+
+      enqueueSnackbar(response.message, { variant: "success" });
+      setProducts((prevProducts) =>
+        prevProducts.filter((product) => product.id !== selectedProduct.id)
+      );
+    } catch (error: any) {
+      enqueueSnackbar(
+        error.message || "An error occurred while deleting the product.",
+        {
+          variant: "error",
+        }
+      );
+    } finally {
+      setLoadingDelete(false);
+      setOpenDeleteDialog(false);
+    }
   };
 
   const columns: GridColDef[] = [
@@ -163,60 +200,48 @@ export default function ProductTable() {
     );
 
   return (
-    <Box sx={{ height: 600, width: "100%" }}>
-      <DataGrid
-        rows={products}
-        columns={columns}
-        rowCount={totalRows}
-        getRowClassName={(params) =>
-          params.indexRelativeToCurrentPage % 2 === 0 ? "even" : "odd"
-        }
-        initialState={{
-          pagination: { paginationModel: { pageSize: 20 } },
-        }}
-        pagination
-        paginationMode="server"
-        paginationModel={paginationModel}
-        onPaginationModelChange={setPaginationModel}
-        pageSizeOptions={[10, 20, 50]}
-        loading={loading}
-        density="compact"
-      />
+    <>
+      <CreateNewProduct onRefetch={handleRefetchProducts} />
+
+      <Box sx={{ height: 600, width: "100%" }}>
+        <DataGrid
+          rows={products}
+          columns={columns}
+          rowCount={totalRows}
+          getRowClassName={(params) =>
+            params.indexRelativeToCurrentPage % 2 === 0 ? "even" : "odd"
+          }
+          initialState={{
+            pagination: { paginationModel: { pageSize: 20 } },
+          }}
+          pagination
+          paginationMode="server"
+          paginationModel={paginationModel}
+          onPaginationModelChange={setPaginationModel}
+          pageSizeOptions={[10, 20, 50]}
+          loading={loading}
+          density="compact"
+        />
+      </Box>
 
       {/* Edit Dialog */}
-      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)}>
-        <DialogTitle>Edit Product</DialogTitle>
-        <DialogContent>
-          <TextField
-            label="Name"
-            fullWidth
-            margin="dense"
-            value={selectedProduct?.name || ""}
-            onChange={(e) =>
-              setSelectedProduct((prev) =>
-                prev ? { ...prev, name: e.target.value } : null
-              )
-            }
-          />
-          <TextField
-            label="Price"
-            fullWidth
-            margin="dense"
-            type="number"
-            value={selectedProduct?.price || ""}
-            onChange={(e) =>
-              setSelectedProduct((prev) =>
-                prev ? { ...prev, price: parseFloat(e.target.value) } : null
-              )
-            }
+      <Dialog
+        fullWidth
+        maxWidth="lg"
+        open={openEditDialog}
+        onClose={() => setOpenEditDialog(false)}
+      >
+        <DialogContent
+          sx={{ backgroundColor: "background.default", padding: 2 }}
+        >
+          <UpdateProductForm
+            selectedProduct={selectedProduct}
+            onUpdate={handleUpdateProductInState}
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenEditDialog(false)} variant="outlined">
             Cancel
-          </Button>
-          <Button onClick={handleUpdateProduct} variant="contained">
-            Update
           </Button>
         </DialogActions>
       </Dialog>
@@ -238,11 +263,12 @@ export default function ProductTable() {
             onClick={handleDeleteProduct}
             variant="contained"
             color="error"
+            disabled={loadingDelete}
           >
-            Delete
+            {loadingDelete ? "Deleting..." : "Delete"}
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </>
   );
 }

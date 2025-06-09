@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import CardProduct from "./card/CardProduct";
-import { Alert, Box, Grid2 } from "@mui/material";
+import { Alert, Grid2 } from "@mui/material";
 import { CardProductProps } from "@/types/product";
 import ProductListSkeleton from "./buffering/list-product";
 
@@ -61,21 +61,15 @@ export default function ProductList() {
     );
 
   return (
-    <>
-      <Box sx={{ flexGrow: 1, pt: 2 }}>
-        <Grid2
-          container
-          spacing={{ xs: 2, md: 3 }}
-          columns={{ xs: 4, sm: 6, md: 10 }}
-        >
-          {products &&
-            products.map((product) => (
-              <Grid2 key={product.id} size={{ xs: 1, md: 2 }}>
-                <CardProduct {...product} />
-              </Grid2>
-            ))}
-        </Grid2>
-      </Box>
-    </>
+    products &&
+    products.map((product) => (
+      <Grid2
+        key={product.id}
+        size={{ xs: 2, sm: 3, md: 3 }}
+        sx={{ padding: 2 }}
+      >
+        <CardProduct {...product} />
+      </Grid2>
+    ))
   );
 }

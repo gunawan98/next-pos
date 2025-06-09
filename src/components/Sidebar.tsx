@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import { Drawer, Box, IconButton } from "@mui/material";
+import { Drawer, Box, IconButton, Tooltip } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PointOfSaleRoundedIcon from "@mui/icons-material/PointOfSaleRounded";
 import UpdateRoundedIcon from "@mui/icons-material/UpdateRounded";
-import InventoryRoundedIcon from "@mui/icons-material/InventoryRounded";
-import { useRouter } from "next/navigation";
+import InboxRoundedIcon from "@mui/icons-material/InboxRounded";
+import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import ColorModeSelect from "@/theme/ColorModeSelect";
 import Link from "next/link";
@@ -31,12 +31,12 @@ export default function Sidebar() {
   return (
     <Drawer
       sx={{
+        display: usePathname() === "/login" ? "none" : "flex",
         width: 80,
         flexShrink: 0,
         "& .MuiDrawer-paper": {
           width: 80,
           boxSizing: "border-box",
-          display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
           alignItems: "center",
@@ -62,31 +62,40 @@ export default function Sidebar() {
         />
 
         <Link href="/dashboard">
-          <IconButton color="inherit" sx={{ marginTop: 2 }}>
-            <PointOfSaleRoundedIcon />
-          </IconButton>
+          <Tooltip title="Cashier" placement="right" arrow>
+            <IconButton color="inherit" sx={{ marginTop: 2 }}>
+              <PointOfSaleRoundedIcon />
+            </IconButton>
+          </Tooltip>
         </Link>
-        <Link href="/history">
-          <IconButton color="inherit" sx={{ marginTop: 2 }}>
-            <UpdateRoundedIcon />
-          </IconButton>
+        <Link href="/History payment">
+          <Tooltip title="Stock product" placement="right" arrow>
+            <IconButton color="inherit" sx={{ marginTop: 2 }}>
+              <UpdateRoundedIcon />
+            </IconButton>
+          </Tooltip>
         </Link>
         <Link href="/product">
-          <IconButton color="inherit" sx={{ marginTop: 2 }}>
-            <InventoryRoundedIcon />
-          </IconButton>
+          <Tooltip title="Stock product" placement="right" arrow>
+            <IconButton color="inherit" sx={{ marginTop: 2 }}>
+              <InboxRoundedIcon />
+            </IconButton>
+          </Tooltip>
         </Link>
       </Box>
 
       <Box sx={{ textAlign: "center", paddingBottom: 2 }}>
         <ColorModeSelect />
-        <IconButton
-          onClick={handleLogout}
-          color="inherit"
-          sx={{ marginTop: 2 }}
-        >
-          <LogoutIcon />
-        </IconButton>
+
+        <Tooltip title="Logout" placement="right" arrow>
+          <IconButton
+            onClick={handleLogout}
+            color="inherit"
+            sx={{ marginTop: 2 }}
+          >
+            <LogoutIcon />
+          </IconButton>
+        </Tooltip>
       </Box>
     </Drawer>
   );

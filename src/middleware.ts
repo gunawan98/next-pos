@@ -20,7 +20,7 @@ export async function middleware(request: NextRequest) {
 	}
 
 	// Define protected paths
-	const protectedPaths = ["/dashboard", "/profile", "/api/product"];
+	const protectedPaths = ["/dashboard", "/profile", "/api/product", "/product"];
 	const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
 
 	// Redirect to login if no refresh token or refresh token is expired
@@ -93,5 +93,6 @@ export const config = {
 		"/profile/:path*",
 		"/login",
 		"/api/product",
+		"/product"
 	],
 };

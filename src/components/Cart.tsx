@@ -14,7 +14,7 @@ import {
   DialogTitle,
   Stack,
 } from "@mui/material";
-import AddForm from "./form/cart/add-form";
+import AddForm from "./section/cart/add-form";
 import { deleteAvailableCart } from "@/app/dashboard/action";
 import { enqueueSnackbar } from "notistack";
 
